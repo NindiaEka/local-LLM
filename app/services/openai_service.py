@@ -13,6 +13,7 @@ from app.schemas.openai import (
     Message,
     Usage,
 )
+from app.schemas.model import ModelInfo, ModelsResponse
 from app.services.ollama_service import (
     OllamaStreamConnectionError,
     OllamaStreamProtocolError,
@@ -20,6 +21,7 @@ from app.services.ollama_service import (
     OllamaStreamUpstreamError,
     ask_ollama_raw,
     ask_ollama_stream,
+    list_ollama_models_raw,
 )
 
 
@@ -167,3 +169,35 @@ async def stream_complete(request: ChatCompletionRequest) -> AsyncIterator[dict[
 
     if not saw_done:
         raise OpenAIStreamProtocolError("Ollama stream ended before terminal chunk")
+
+
+async def list_models() -> ModelsResponse:
+    raw_payload = await list_ollama_models_raw()
+
+    raw_models = raw_payload.get("models", [])
+    if not isinstance(raw_models, list):
+        raw_models = []
+
+    created = int(time.time())
+    models: list[ModelInfo] = []
+    for raw_model in raw_models:
+        if not isinstance(raw_model, dict):
+            continue
+
+        model_name = raw_model.get("name")
+        if not isinstance(model_name, str) or not model_name:
+            continue
+
+        models.append(
+            ModelInfo(
+                id=model_name,
+                object="model",
+                created=created,
+                owned_by="local-llm-gateway",
+            )
+        )
+
+    return ModelsResponse(
+        object="list",
+        data=models,
+    )

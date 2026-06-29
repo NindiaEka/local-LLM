@@ -87,6 +87,21 @@ async def ask_ollama_raw(model: str, messages: list[dict]) -> dict:
     return await _post_ollama(payload)
 
 
+async def list_ollama_models_raw() -> dict:
+    url = f"{settings.ollama_base_url}/api/tags"
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, timeout=_TIMEOUT)
+            response.raise_for_status()
+            return response.json()
+    except httpx.ConnectError as exc:
+        raise OllamaConnectionError("Ollama is not reachable") from exc
+    except httpx.TimeoutException as exc:
+        raise OllamaTimeoutError("Ollama did not respond in time") from exc
+    except httpx.HTTPStatusError as exc:
+        raise OllamaUpstreamError(exc.response.status_code) from exc
+
+
 def _validate_optional_int(value: object, field_name: str) -> int | None:
     if value is None:
         return None

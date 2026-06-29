@@ -9,6 +9,7 @@ dependencies = [
     "httpx>=0.28.1",
     "pydantic>=2.11",
     "pydantic-settings>=2.9",
+    "openai>=2.44.0",
 ]
 
 [build-system]

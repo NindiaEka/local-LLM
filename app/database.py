@@ -21,4 +21,20 @@ def init_db() -> None:
                 created_at TEXT    NOT NULL
             )
         """)
+
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS request_logs (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                request_id  TEXT,
+                timestamp   TEXT    NOT NULL,
+                api_key_id  TEXT,
+                endpoint    TEXT    NOT NULL,
+                method      TEXT    NOT NULL,
+                model       TEXT,
+                status_code INTEGER NOT NULL,
+                latency_ms  REAL    NOT NULL,
+                client_ip   TEXT
+            )
+        """)
+
         connection.commit()

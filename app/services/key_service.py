@@ -1,11 +1,17 @@
 import hashlib
 import secrets
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
 
 from app.database import get_connection
 from app.schemas.key import CreateKeyResponse, KeyInfoResponse
+
+
+@dataclass(frozen=True)
+class ValidatedApiKey:
+    id: int
 
 
 def _hash_key(plain_key: str) -> str:
@@ -67,13 +73,13 @@ def revoke_key(key_id: int) -> bool:
     return cursor.rowcount > 0
 
 
-def validate_key(plain_key: str) -> None:
+def validate_key(plain_key: str) -> ValidatedApiKey:
     key_hash = _hash_key(plain_key)
 
     with get_connection() as connection:
         row = connection.execute(
             """
-            SELECT is_active FROM api_keys
+            SELECT id, is_active FROM api_keys
             WHERE key_hash = ?
             """,
             (key_hash,),
@@ -84,3 +90,5 @@ def validate_key(plain_key: str) -> None:
 
     if not row["is_active"]:
         raise HTTPException(status_code=403, detail="API key has been revoked")
+
+    return ValidatedApiKey(id=row["id"])
