@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from app.database import init_db
 from app.middleware.logging import RequestLoggingMiddleware
@@ -21,7 +23,21 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-app.add_middleware(RequestLoggingMiddleware)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print("\n========== VALIDATION ERROR ==========")
+    print(exc.errors())
+    print("======================================\n")
+
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+    )
+
+
+# app.add_middleware(RequestLoggingMiddleware)
 
 app.include_router(chat.router)
 app.include_router(keys.router)

@@ -3,9 +3,14 @@ from typing import Literal
 from pydantic import BaseModel
 
 
+class ContentPart(BaseModel):
+    type: Literal["text"] | str
+    text: str | None = None
+
+
 class Message(BaseModel):
     role: str
-    content: str
+    content: str | list[ContentPart]
 
 
 class ChatCompletionRequest(BaseModel):

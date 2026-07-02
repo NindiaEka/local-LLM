@@ -24,7 +24,13 @@ def _sse_frame(payload: str) -> str:
 async def _stream_chat_completions(body: ChatCompletionRequest) -> AsyncIterator[str]:
     try:
         async for chunk in openai_service.stream_complete(body):
-            yield _sse_frame(json.dumps(chunk))
+            payload = json.dumps(chunk)
+
+            print("\n========== SSE ==========")
+            print(payload)
+            print("=========================\n")
+
+            yield _sse_frame(payload)
     except OpenAIStreamConnectionError as exc:
         raise HTTPException(status_code=503, detail="Ollama is not reachable") from exc
     except OpenAIStreamTimeoutError as exc:

@@ -1,3 +1,4 @@
+import json
 import time
 import uuid
 from collections.abc import AsyncIterator
@@ -53,10 +54,32 @@ class _StreamRequestContext:
     created: int
     model: str
 
+from typing import Any
+
+
+def _normalize_content(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+
+    if not isinstance(content, list):
+        return ""
+
+    texts = []
+
+    for part in content:
+        if hasattr(part, "type") and part.type == "text":
+            if getattr(part, "text", None):
+                texts.append(part.text)
+
+    return "\n".join(texts)
+
 
 async def complete(request: ChatCompletionRequest) -> ChatCompletionResponse:
     messages = [
-        {"role": m.role, "content": m.content}
+        {
+            "role": m.role,
+            "content": _normalize_content(m.content),
+        }
         for m in request.messages
     ]
 
@@ -121,7 +144,7 @@ def _to_openai_stream_chunk(
     if isinstance(content, str) and content:
         delta["content"] = content
 
-    return {
+    chunk = {
         "id": context.request_id,
         "object": "chat.completion.chunk",
         "created": context.created,
@@ -130,15 +153,27 @@ def _to_openai_stream_chunk(
             {
                 "index": 0,
                 "delta": delta,
-                "finish_reason": _to_finish_reason(done, internal_chunk.get("done_reason")),
+                "finish_reason": _to_finish_reason(
+                    done,
+                    internal_chunk.get("done_reason"),
+                ),
             }
         ],
     }
 
+    print("\n====== STREAM CHUNK ======")
+    print(json.dumps(chunk, indent=2))
+    print("==========================\n")
+
+    return chunk
+
 
 async def stream_complete(request: ChatCompletionRequest) -> AsyncIterator[dict[str, Any]]:
     messages = [
-        {"role": m.role, "content": m.content}
+        {
+            "role": m.role,
+            "content": _normalize_content(m.content),
+        }
         for m in request.messages
     ]
 
@@ -151,8 +186,22 @@ async def stream_complete(request: ChatCompletionRequest) -> AsyncIterator[dict[
     saw_done = False
 
     try:
-        async for internal_chunk in ask_ollama_stream(model=request.model, messages=messages):
-            yield _to_openai_stream_chunk(context, internal_chunk)
+        async for internal_chunk in ask_ollama_stream(
+            model=request.model,
+            messages=messages,
+        ):
+
+            print("\n========== OLLAMA RAW ==========")
+            print(internal_chunk)
+            print("================================\n")
+
+            chunk = _to_openai_stream_chunk(context, internal_chunk)
+
+            print("\n========== OPENAI CHUNK ==========")
+            print(json.dumps(chunk, indent=2))
+            print("==================================\n")
+
+            yield chunk
 
             if internal_chunk.get("done") is True:
                 saw_done = True

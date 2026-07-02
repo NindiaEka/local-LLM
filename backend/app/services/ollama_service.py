@@ -5,7 +5,7 @@ import httpx
 
 from app.config import settings
 
-_TIMEOUT = 120.0
+_TIMEOUT = None
 
 
 class OllamaError(RuntimeError):
@@ -184,7 +184,9 @@ async def ask_ollama_stream(model: str, messages: list[dict]) -> AsyncIterator[d
                         raw_chunk = json.loads(line)
                     except json.JSONDecodeError as exc:
                         raise OllamaStreamProtocolError("Received malformed JSON from Ollama stream") from exc
-
+                    print("\n===== RAW OLLAMA =====")
+                    print(raw_chunk)
+                    print("======================")
                     yield _normalize_ollama_stream_chunk(raw_chunk)
 
                 if not saw_any_chunk:
