@@ -10,6 +10,7 @@ dependencies = [
     "pydantic>=2.11",
     "pydantic-settings>=2.9",
     "openai>=2.44.0",
+    "oracledb>=4.0.1",
 ]
 
 [build-system]
